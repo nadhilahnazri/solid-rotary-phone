@@ -1,0 +1,9 @@
+{
+    "Mathematics": {
+        "Calculus1": true,
+        "Calculus11": true
+    },
+    "Machine learning": {
+        "linear regression": false
+    }
+}
