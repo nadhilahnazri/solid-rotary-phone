@@ -1,78 +1,98 @@
 import pygame
-import math
-import random
+import streamlit as st
+from io import BytesIO
+from PIL import Image
 
-# Recursive function to draw a realistic tree
-def draw_realistic_tree(screen, x, y, angle, length, depth, thickness):
-    if depth == 0:
-        # Draw leaves at the end of branches
-        leaf_color = (34, random.randint(100, 180), 34)  # Shades of green
-        pygame.draw.circle(screen, leaf_color, (int(x), int(y)), random.randint(3, 6))
-        return
+# Screen Dimensions
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
 
-    # Calculate the end point of the branch
-    x2 = x + length * math.cos(math.radians(angle))
-    y2 = y - length * math.sin(math.radians(angle))
+# Colors
+SKY_BLUE = (135, 206, 235)
+GRASS_GREEN = (34, 139, 34)
+TREE_TRUNK = (139, 69, 19)
+LEAF_GREEN = (50, 205, 50)
+DARK_GREEN = (0, 128, 0)
 
-    # Draw the branch
-    branch_color = (139, 69, 19)  # Brown for the trunk
-    pygame.draw.line(screen, branch_color, (x, y), (x2, y2), thickness)
+# Function to draw a single tree
+def draw_tree(surface, x, y, trunk_width, trunk_height, foliage_radius, subject_name):
+    # Draw trunk
+    trunk_rect = pygame.Rect(x, y - trunk_height, trunk_width, trunk_height)
+    pygame.draw.rect(surface, TREE_TRUNK, trunk_rect)
 
-    # Randomize angles and lengths for natural branching
-    angle_variation = random.uniform(-10, 10)
-    length_variation = random.uniform(-5, 5)
+    # Draw foliage (overlapping circles for a stylized look)
+    pygame.draw.circle(surface, LEAF_GREEN, (x + trunk_width // 2, y - trunk_height), foliage_radius)
+    pygame.draw.circle(surface, DARK_GREEN, (x + trunk_width // 2 - foliage_radius // 2, y - trunk_height + foliage_radius // 2), foliage_radius)
+    pygame.draw.circle(surface, DARK_GREEN, (x + trunk_width // 2 + foliage_radius // 2, y - trunk_height + foliage_radius // 2), foliage_radius)
 
-    # Recursive calls for left and right branches
-    draw_realistic_tree(
-        screen, x2, y2, angle - 20 + angle_variation, length * 0.7 + length_variation, depth - 1, max(1, thickness - 1)
-    )
-    draw_realistic_tree(
-        screen, x2, y2, angle + 20 + angle_variation, length * 0.7 + length_variation, depth - 1, max(1, thickness - 1)
-    )
+    # Add the subject name below the tree
+    font = pygame.font.Font(None, 24)
+    text_surface = font.render(subject_name, True, (0, 0, 0))
+    surface.blit(text_surface, (x + trunk_width // 2 - text_surface.get_width() // 2, y + 10))
 
-# Pygame setup for tree rendering
-def run_realistic_tree():
+# Function to draw the entire forest
+def draw_forest(subjects):
     pygame.init()
+    surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+    surface.fill(SKY_BLUE)
+    pygame.draw.rect(surface, GRASS_GREEN, (0, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT // 2))
 
-    # Set up display
-    screen_width, screen_height = 800, 600
-    screen = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("Realistic 2D Tree")
+    # Determine tree placement
+    tree_spacing = SCREEN_WIDTH // (len(subjects) + 1)
+    x_positions = [tree_spacing * (i + 1) for i in range(len(subjects))]
 
-    # Colors and clock
-    background_color = (255, 255, 255)  # White background
-    clock = pygame.time.Clock()
+    # Draw each tree (subject)
+    for i, (subject, topics) in enumerate(subjects.items()):
+        x = x_positions[i]
+        y = SCREEN_HEIGHT // 2
+        trunk_width = 30
+        trunk_height = 50 + len(topics) * 20  # Dynamic trunk height based on number of topics
+        foliage_radius = 40
+        draw_tree(surface, x, y, trunk_width, trunk_height, foliage_radius, subject)
 
-    # Tree state variables
-    running = True
-    depth = 5  # Default depth for the tree
+    return surface
 
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP and depth < 15:  # Increase depth
-                    depth += 1
-                elif event.key == pygame.K_DOWN and depth > 1:  # Decrease depth
-                    depth -= 1
+# Convert Pygame surface to an image for Streamlit
+def pygame_to_image(surface):
+    img_str = pygame.image.tostring(surface, "RGB")
+    img = Image.frombytes("RGB", (surface.get_width(), surface.get_height()), img_str)
+    return img
 
-        # Clear the screen
-        screen.fill(background_color)
+# Streamlit app
+st.title("🌳 Learning Tracker - Knowledge Forest 🌳")
 
-        # Draw the tree
-        draw_realistic_tree(screen, screen_width // 2, screen_height - 50, -90, 100, depth, 10)
+# Initialize session state for subjects and topics
+if "forest" not in st.session_state:
+    st.session_state.forest = {}
 
-        # Display instructions
-        font = pygame.font.Font(None, 30)
-        text = font.render("Press UP to grow, DOWN to shrink, ESC to quit", True, (0, 0, 0))
-        screen.blit(text, (10, 10))
+# Add a new subject
+new_subject = st.text_input("Add a New Subject:")
+if st.button("Add Subject"):
+    if new_subject and new_subject not in st.session_state.forest:
+        st.session_state.forest[new_subject] = []
+        st.success(f"Added subject: {new_subject}")
+    elif new_subject in st.session_state.forest:
+        st.warning(f"Subject '{new_subject}' already exists!")
+    else:
+        st.warning("Subject name cannot be empty!")
 
-        # Update the display
-        pygame.display.flip()
-        clock.tick(30)
+# Add topics to an existing subject
+subject_choice = st.selectbox("Select a Subject to Add Topics:", [""] + list(st.session_state.forest.keys()))
+if subject_choice:
+    new_topic = st.text_input("Add a New Topic:")
+    if st.button("Add Topic"):
+        if new_topic and new_topic not in st.session_state.forest[subject_choice]:
+            st.session_state.forest[subject_choice].append(new_topic)
+            st.success(f"Added topic '{new_topic}' to subject '{subject_choice}'")
+        elif new_topic in st.session_state.forest[subject_choice]:
+            st.warning(f"Topic '{new_topic}' already exists in '{subject_choice}'!")
+        else:
+            st.warning("Topic name cannot be empty!")
 
-    pygame.quit()
-
-# Run the realistic tree rendering
-run_realistic_tree()
+# Display the forest
+if st.session_state.forest:
+    forest_surface = draw_forest(st.session_state.forest)  # Draw the forest
+    forest_image = pygame_to_image(forest_surface)  # Convert to PIL image
+    st.image(forest_image, caption="Knowledge Forest", use_column_width=True)
+else:
+    st.write("🌱 No subjects added yet. Add a subject to start growing your knowledge forest!")
