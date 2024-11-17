@@ -6,12 +6,6 @@ from datetime import datetime, timedelta
 import pygame
 from PIL import Image
 
-# Set the page configuration
-st.set_page_config(
-    page_title="Knowledge Forest",  # Page title
-    page_icon="🌿",              # Emoji or local/URL path to an image
-)
-
 # ----------------------- MongoDB Configuration -----------------------
 MONGO_URI = "mongodb+srv://sc22mmbh:gtd7grQKEf7M9SkL@cluster0.8gz5z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 client = MongoClient(MONGO_URI)
@@ -19,13 +13,21 @@ db = client["tracker"]  # Database name
 tasks_collection = db["tasks"]  # Tasks collection
 forest_collection = db["forest"]  # Forest collection
 
+# ----------------------- Page Configuration -----------------------
+st.set_page_config(
+    page_title="Knowledge Forest",  # Page title
+    page_icon="🌿",                 # Emoji or path to an image
+    layout="wide",                  # Layout can be "centered" or "wide"
+    initial_sidebar_state="expanded"  # Sidebar state
+)
+
 # ----------------------- Helper Functions -----------------------
 # Fetch tasks from MongoDB
 def fetch_tasks():
     tasks = list(tasks_collection.find())
     if tasks:
         for task in tasks:
-            task["_id"] = str(task["_id"])  # Convert ObjectId to string for compatibility
+            task["_id"] = str(task["_id"])  # Convert ObjectId to string
         return pd.DataFrame(tasks)
     else:
         return pd.DataFrame(columns=["_id", "Category", "Task", "Estimated Time", "Elapsed Time", "Completed", "Due Date"])
@@ -54,16 +56,15 @@ def delete_task(task_id):
 def fetch_forest():
     forest = forest_collection.find_one()
     if forest:
-        del forest["_id"]  # Remove the MongoDB ObjectId field
+        del forest["_id"]  # Remove ObjectId field
     return forest if forest else {}
 
 # Save forest to MongoDB
 def save_forest(forest):
-    # Ensure topics are lists
     for subject, topics in forest.items():
         if not isinstance(topics, list):
-            forest[subject] = []  # Default to an empty list
-    forest_collection.delete_many({})  # Clear old forest
+            forest[subject] = []  # Ensure topics are lists
+    forest_collection.delete_many({})  # Clear old data
     forest_collection.insert_one(forest)
 
 # ----------------------- Forest Visualization Functions -----------------------
@@ -109,7 +110,7 @@ def pygame_to_image(surface):
     return img
 
 # ----------------------- Main App -----------------------
-st.title("🌳 Unified Productivity and Knowledge Forest App 🌳")
+st.title("🌳 Knowledge Forest 🌳")
 
 # Load data
 tasks_df = fetch_tasks()
@@ -151,7 +152,7 @@ if subject_choice:
             save_forest(forest)
             st.sidebar.success(f"Added topic '{new_topic}' to subject '{subject_choice}'")
         elif new_topic in forest[subject_choice]:
-            st.sidebar.warning(f"Topic '{new_topic}' already exists in '{subject_choice}'!")
+            st.sidebar.warning(f"Topic '{new_topic}' already exists!")
         else:
             st.sidebar.warning("Topic name cannot be empty!")
 
