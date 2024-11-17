@@ -6,6 +6,12 @@ from datetime import datetime, timedelta
 import pygame
 from PIL import Image
 
+# Set the page configuration
+st.set_page_config(
+    page_title="Knowledge Forest",  # Page title
+    page_icon="🌿",              # Emoji or local/URL path to an image
+)
+
 # ----------------------- MongoDB Configuration -----------------------
 MONGO_URI = "mongodb+srv://sc22mmbh:gtd7grQKEf7M9SkL@cluster0.8gz5z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 client = MongoClient(MONGO_URI)
