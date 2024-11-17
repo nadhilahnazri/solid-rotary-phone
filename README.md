@@ -1,6 +1,4 @@
 
-
-```markdown
 # 🌳 Unified Productivity and Knowledge Forest App 🌳
 
 A unique application that blends productivity tools with a dynamic forest visualization to represent learning and task progress.
